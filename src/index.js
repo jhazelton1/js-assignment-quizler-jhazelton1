@@ -66,6 +66,11 @@ const takeQuiz = (title, output) =>
     )
     .catch(err => console.log('Error taking the quiz.', err))
 
+const renameValue = (obj, i) => {
+  obj[`name`] = `${obj[`name`]}-${i}`
+  return obj
+}
+
 const takeRandomQuiz = (output, n, quizzes) =>
   Promise.all(readMultipleFiles(quizzes))
     .then(data =>
@@ -74,6 +79,7 @@ const takeRandomQuiz = (output, n, quizzes) =>
         []
       )
     )
+    .then(quizData => quizData.map((q, i) => renameValue(q, i)))
     .then(quizData => prompt(quizData))
     .then(randomQuiz =>
       writeJsonFile(`quiz/answers/${output}.json`, JSON.stringify(randomQuiz))
