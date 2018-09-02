@@ -71,14 +71,16 @@ const renameValue = (obj, i) => {
   return obj
 }
 
+const concatQuizzes = (quizData, n) => {
+  return quizData.reduce(
+    (all, quiz) => all.concat(chooseRandom(createQuestions(quiz), n)),
+    []
+  )
+}
+
 const takeRandomQuiz = (output, n, quizzes) =>
   Promise.all(readMultipleFiles(quizzes))
-    .then(data =>
-      data.reduce(
-        (all, quiz) => all.concat(chooseRandom(createQuestions(quiz), n)),
-        []
-      )
-    )
+    .then(data => concatQuizzes(data, n))
     .then(quizData => quizData.map((q, i) => renameValue(q, i)))
     .then(quizData => prompt(quizData))
     .then(randomQuiz =>
