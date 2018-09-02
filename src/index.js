@@ -2,12 +2,13 @@ import vorpal from 'vorpal'
 import { prompt } from 'inquirer'
 
 import {
-  readFile,
-  writeFile,
   chooseRandom,
   createPrompt,
-  createQuestions
+  createQuestions,
+  writeJsonFile,
+  readJsonFile
 } from './lib'
+import { resolve } from 'url'
 
 const cli = vorpal()
 
@@ -32,19 +33,52 @@ const askForQuestions = [
   }
 ]
 
+const promptToQuiz = data =>
+  createPrompt(data).reduce((arr, c) => {
+    c['validate'] = input => {
+      const pass = input.length > 2
+      return pass ? true : 'Enter a longer input!'
+    }
+    arr.push(c)
+    return arr
+  }, [])
+
+const readMultipleFiles = (arr, n) =>
+  arr.reduce((all, file) => {
+    all.push(readJsonFile(`quiz/${file}.json`).then(data => JSON.parse(data)))
+    return all
+  }, [])
+
 const createQuiz = title =>
   prompt(askForQuestions)
-    .then(answer =>
-      // TODO finish createQuiz logic
-      console.log(answer)
+    .then(answer => prompt(promptToQuiz(answer)))
+    .then(quizData =>
+      writeJsonFile(`quiz/${title}.json`, JSON.stringify(quizData))
     )
     .catch(err => console.log('Error creating the quiz.', err))
 
-// const takeQuiz = (title, output) =>
-// TODO implement takeQuiz
+const takeQuiz = (title, output) =>
+  readJsonFile(`quiz/${title}.json`)
+    .then(data => createQuestions(JSON.parse(data)))
+    .then(quizData => prompt(quizData))
+    .then(answers =>
+      writeJsonFile(`quiz/answers/${output}.json`, JSON.stringify(answers))
+    )
+    .catch(err => console.log('Error taking the quiz.', err))
 
-// const takeRandomQuiz = (quizes, output, n) =>
-// TODO implement takeRandomQuiz
+const takeRandomQuiz = (output, n, quizzes) =>
+  Promise.all(readMultipleFiles(quizzes))
+    .then(data =>
+      data.reduce(
+        (all, quiz) => all.concat(chooseRandom(createQuestions(quiz), n)),
+        []
+      )
+    )
+    .then(quizData => prompt(quizData))
+    .then(randomQuiz =>
+      writeJsonFile(`quiz/answers/${output}.json`, JSON.stringify(randomQuiz))
+    )
+    .catch(err => console.log('Error taking the random quiz.', err))
 
 cli
   .command(
@@ -52,7 +86,6 @@ cli
     'Creates a new quiz and saves it to the given fileName'
   )
   .action(function (input, callback) {
-    // TODO update create command for correct functionality
     return createQuiz(input.fileName)
   })
 
@@ -62,18 +95,18 @@ cli
     'Loads a quiz and saves the users answers to the given outputFile'
   )
   .action(function (input, callback) {
-    // TODO implement functionality for taking a quiz
+    return takeQuiz(input.fileName, input.outputFile)
   })
 
 cli
   .command(
-    'random <outputFile> <fileNames...>',
+    'random <outputFile> <n> <fileNames...>',
     'Loads a quiz or' +
       ' multiple quizes and selects a random number of questions from each quiz.' +
       ' Then, saves the users answers to the given outputFile'
   )
   .action(function (input, callback) {
-    // TODO implement the functionality for taking a random quiz
+    return takeRandomQuiz(input.outputFile, input.n, input.fileNames)
   })
 
 cli.delimiter(cli.chalk['yellow']('quizler>')).show()
