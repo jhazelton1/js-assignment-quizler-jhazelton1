@@ -43,7 +43,7 @@ const promptToQuiz = data =>
     return arr
   }, [])
 
-const readMultipleFiles = (arr, n) =>
+const readMultipleFiles = arr =>
   arr.reduce((all, file) => {
     all.push(readJsonFile(`quiz/${file}.json`).then(data => JSON.parse(data)))
     return all
@@ -62,7 +62,10 @@ const takeQuiz = (title, output) =>
     .then(data => createQuestions(JSON.parse(data)))
     .then(quizData => prompt(quizData))
     .then(answers =>
-      writeJsonFile(`quiz/answers/${output}.json`, JSON.stringify(answers))
+      writeJsonFile(
+        `quiz/answers/${title}-${output}.json`,
+        JSON.stringify(answers)
+      )
     )
     .catch(err => console.log('Error taking the quiz.', err))
 
